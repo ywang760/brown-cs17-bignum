@@ -1,0 +1,277 @@
+
+QUESTION FOR TA: can we have multiple legal representations for the same bignum? for example 
+(cons 3 (cons 2 empty)) and (cons 3 (cons 2 (cons 0 empty))) being treated as identical
+and either being options for the program to return for bignum+ or bignum*? No
+
+----------------------------------------------BIGNUM-----------------------------------------------
+
+Data Definition:
+  bignum: 
+  - a list of single digit natural numbers (0-9) representing a natural number of arbitrary length.
+  - the first element of bignum represents the ones digit of the number, while the second element
+    of bignum represents the tens digit, and so on (looks like reverse order).
+  - each bignum ends in "empty", representing the end of the number and is treated as the zeros
+    that preceed the number. The empty list itself is treated as zero.
+
+Example Data:
+  - 0: either (cons 0 empty) or simply empty
+  - 8: (cons 8 empty)
+  - 82: (cons 2 (cons 8 empty))
+  - 594: (cons 4 (cons 9 (cons 5 empty)))
+
+
+---------------------------------------------ADDITION----------------------------------------------
+
+Type Signature:
+  bignum+: (bignum) * (bignum) -> (bignum)
+
+Call Structure:
+  (define (bignum+ bignum1 bignum2) ...)
+
+I/O Specification:
+  Input: bignum1 and bignum2, two bignums that we want to add together
+  Output: a bignum that is the sum of bignum1 and bignum2
+
+Recursion Diagrams (Test cases):
+  (AR stands for arithmetic representation)
+
+  For simplification,
+    (digit-rem-10 n) means the remainder of n over 10;
+    (digit-quo-10 n) means the quotient of n over 10;
+    these will be numeric results under regular number representation, not bignum representation.
+
+  AR: 0+0=0
+  OI: empty * empty 
+  RI: n/a
+  RO: n/a
+    if both bignums are empty produce empty
+  OO: empty
+
+  AR: 9+0=9
+  OI: (cons 9 empty) * empty
+  RI: empty * empty
+  RO: empty
+    if one of the bignums is empty then return the nonempty bignum
+  OO: (cons 9 empty)
+
+  AR: 4+3=7
+  OI: (cons 4 empty) * (cons 3 empty)
+  RI: empty * empty
+  RO: empty
+    digit-add of the first elements of each list and cons that onto RO
+  OO: (cons 7 empty)
+
+  AR: 31+37=68
+  OI: (cons 1 (cons 3 empty)) * (cons 7 (cons 3 empty))
+  RI: (cons 3 empty) * (cons 3 empty)
+  RO: (cons 6 empty)
+    digit-add of the first elements of each list and cons that onto RO
+  OO: (cons 8 (cons 6 empty))
+
+  AR: 3+28=31
+  OI: (cons 3 empty) * (cons 8 (cons 2 empty))
+  RI: empty * (cons 2 empty)
+  RO: (cons 2 empty)
+    digit-add the first elements of each list, call that first-sum ---> 11
+    take the digit-quo-10 of first-sum and convert that to bignum representation ---> (cons 1 empty)
+    (bignum+ (digit-quo-10 first-sum)  (RO) ---> (cons 3 empty)
+    (cons (digit-rem-10 first-sum) (that result)) ---> (cons 1 (cons 3 empty))
+  OO: (cons 1 (cons 3 empty))
+
+  AR: 99+1=100
+  OI: (cons 9 (cons 9 empty)) * (cons 1 empty)
+  RI: (cons 9 empty) * empty
+  RO: (cons 9 empty)
+    digit-add the first elements of each list, call that first-sum ---> 10
+    take the digit-quo-10 of first-sum and convert that to bignum representation ---> (cons 1 empty)
+    (bignum+ (digit-quo-10 first-sum) (RO) ---> (cons 0 (cons 1 empty))
+    (cons (digit-rem-10 first-sum) (that result)) ---> (cons 0 (cons 0 (cons 1 empty)))
+  OO: (cons 0 (cons 0 (cons 1 empty)))
+
+  AR: 183+ 984=1167
+  OI: (cons 3 (cons 8 (cons 1 empty))) * (cons 4 (cons 8 (cons 9 empty)))
+  RI: (cons 8 (cons 1 empty)) * (cons 8 (cons 9 empty))
+  RO: (cons 6 (cons 1 (cons 1 empty)))
+    digit-add the first elements of each list, call that first-sum ---> 7
+    take the digit-quo-10 of first-sum and convert that to bignum representation ---> (cons 0 empty)
+    (bignum+ (digit-quo-10 first-sum) (RO) ---> (cons 6 (cons 1 (cons 1 empty)))
+    (cons (digit-rem-10 first-sum) (that result)) ---> (cons 7 (cons 6 (cons 1 (cons 1 empty))))
+  OO: (cons 7 (cons 6 (cons 1 (cons 1 empty))))
+
+Algorithm for bignum+:
+  if neither bignum is empty:
+    if either bignum is (cons 0 empty):
+      it is replaced with empty
+    if neither bignum is (cons 0 empty):
+      digit-add the first element of each bignum, call that first-sum
+      take the digit-quo-10 of first-sum and convert that to bignum representation
+      (bignum+ (digit-quo-10 first-sum) (the bignum+ result of (rest bignum1) and (rest bignum2); i.e. RO))
+      (cons (digit-rem-10 first-sum) (the previous line result))
+  if one bignum is empty:
+    return the nonempty bignum
+  if both bignums are empty:
+    return empty
+
+
+------------------------------------------MULTIPLICATION-------------------------------------------
+
+Type Signature:
+  bignum*: (bignum) * (bignum) -> (bignum)
+
+Call Structure:
+  (define (bignum* bignum1 bignum2) ...)
+
+I/O Specification:
+  Input: two bignums, bignum1 and bignum2, both of arbitrary size, that we wish to multiply together
+  Output: a bignum representing the product of bignum1 and bignum2
+
+Note: We will make use of a helper procedure, digit*bignum, explained after details for bignum*.
+
+Recursion Diagrams (Test Cases):
+  AR: 392*849=332808
+  OI: (cons 2 (cons 9 (cons 3 empty))) * (cons 9 (cons 4 (cons 8 empty)))
+  RI: (cons 9 (cons 3 empty)) * (cons 9 (cons 4 (cons 8 empty)))
+  RO: (cons 1 (cons 1 (cons 1 (cons 3 (cons 3 empty)))))
+    digit*bignum 2 (cons 9 (cons 4 (cons 8 empty))) = (cons 8 (cons 9 (cons 6 (cons 1 empty))))
+    bignum+ (cons 8 (cons 9 (cons 6 (cons 1 empty)))) (cons 0 RO) = (cons 8 (cons 0 (cons 8 (cons 2 (cons 3 (cons 3 empty))))))
+  OO: (cons 8 (cons 0 (cons 8 (cons 2 (cons 3 (cons 3 empty))))))
+
+  AR: 12*99=1188
+  OI: (cons 2 (cons 1 empty)) * (cons 9 (cons 9 empty))
+  RI: (cons 1 empty) * (cons 9 (cons 9 empty))
+  RO: (cons 9 (cons 9 empty))
+    digit*bignum 2 (cons 9 (cons 9 empty)) = (cons 8 (cons 9 (cons 1 empty)))
+    bignum+ (cons 8 (cons 9 (cons 1 empty))) (cons 0 (cons 9 (cons 9 empty))) = (cons 8 (cons 8 (cons 1 (cons 1 empty))))
+  OO: (cons 8 (cons 8 (cons 1 (cons 1 empty))))
+
+  AR: 0*284=0
+  OI: (cons 0 empty) * (cons 4 (cons 8 (cons 2 empty)))
+  RI: empty * (cons 4 (cons 8 (cons 2 empty)))
+  RO: empty
+    digit*bignum 0 (cons 4 (cons 8 (cons 2 empty))) = empty
+    bignum+ empty (cons 0 RO) = (cons 0 empty)
+  OO: (cons 0 empty)
+
+  AR: 1*2=2
+  OI: (cons 1 empty) * (cons 2 empty)
+  RI: empty * (cons 2 empty)
+  RO: empty
+    digit*bignum 1 (cons 2 empty) = (cons 2 empty)
+    bignum+ (cons 2 empty) (cons 0 RO) = (cons 2 empty)
+  OO: (cons 2 empty)
+
+  AR: 10*2=20
+  OI: (cons 0 (cons 1 empty)) * (cons 2 empty)
+  RI: (cons 1 empty) * (cons 2 empty)
+  RO: (cons 2 empty)
+    digit*bignum 0 (cons 2 empty) = empty
+    bignum+ empty (cons 0 RO) = (cons 0 (cons 2 empty))
+  OO: (cons 0 (cons 2 empty))
+
+  AR: 85*203=17255
+  OI: (cons 5 (cons 8 empty)) * (cons 3 (cons 0 (cons 2 empty)))
+  RI: (cons 8 empty) * (cons 3 (cons 0 (cons 2 empty)))
+  RO: (cons 4 (cons 2 (cons 6 (cons 1 empty))))
+    digit*bignum 5 (cons 3 (cons 0 (cons 2 empty))) = (cons 5 (cons 1 (cons 0 (cons 1 empty))))
+    bignum+ (cons 5 (cons 1 (cons 0 (cons 1 empty)))) (cons 0 RO) = (cons 5 (cons 5 (cons 2 (cons 7 (cons 1 empty)))))
+  OO: (cons 5 (cons 5 (cons 2 (cons 7 (cons 1 empty)))))
+
+Algorithm:
+  if bignum1 isn't empty:
+    (digit*bignum (first bignum1) (bignum2)) 
+    (bignum+ (the thing in the previous line) (cons 0 (bignum* (rest bignum1) bignum2)))
+  if bignum1 is empty:
+    return empty
+
+
+
+----------------------------------------------HELPER-----------------------------------------------
+
+Type Signature:
+  digit*bignum: (num) * (bignum) -> (bignum)
+
+Call Structure:
+  (define (digit*bignum num bignum) ...)
+
+I/O Specification:
+  Input: a natural number between 0 and 9 (called num) and a bignum of arbitrary size (called 
+    bignum) that we wish to multiply together
+  Output: a bignum that is the product of num and bignum
+
+Recursion diagrams:
+  AR: 4*593=2372
+  OI: 4 * (cons 3 (cons 9 (cons 5 empty)))
+  RI: 4 * (cons 9 (cons 5 empty))
+  RO: (cons 6 (cons 3 (cons 2 empty)))
+    digit-prod 3 4 = 12, converted to bignum (with digit-quo and digit-rem 10) gets (cons 2 (cons 1 empty))
+    bignum+ (cons 2 (cons 1 empty)) (cons 0 RO) = (cons 2 (cons 7 (cons 3 (cons 2 empty))))
+  OO: (cons 2 (cons 7 (cons 3 (cons 2 empty))))
+
+  AR: 0*2850=0
+  OI: 0 * (cons 0 (cons 5 (cons 8 (cons 2 empty))))
+  RI: n/a
+  RO: n/a
+  OO: empty
+
+  AR: 4*000=0
+  OI: 4 * (cons 0 (cons 0 (cons 0 empty)))
+  RI: 4 * (cons 0 (cons 0 empty))
+  RO: empty
+    digit-prod 4 0 = 0 converted to bignum (with digit-quo and digit-rem 10) gets (cons 0 (cons 0 empty))
+    bignum+ (cons 0 (cons 0 empty)) empty
+  OO: empty
+
+  AR: 8*0=0
+  OI: 8 * empty
+  RI: n/a
+  RO: n/a
+  OO: empty
+
+Algorithm:
+  if the num is 0
+    return empty
+  if the num is not 0
+    if bignum is not empty
+      (digit-prod (first bignum) num) and convert that into a bignum using digit-quo-10 and digit-rem-10
+      (bignum+ (the thing in the previous line) (cons 0 (digit*bignum (num) (rest bignum))))
+    if bignum is empty
+      return empty
+
+
+-------------REMOVE ZEROES FROM END OF LIST-----------------------------
+remove-leading-zeros: num-list -> num-list
+
+OI: (list 0 2 1)
+RI: (list 2 1)
+RO: (list 2 1)
+OO: (list 0 2 1)
+
+OI: (list 2 1 0)
+RI: (list 1 0)
+RO: (list 1)
+OO: (list 2 1)
+
+OI: (list 8 0)
+RI: (list 0)
+RO: empty
+OO: (list 8)
+
+OI: (list 5 0 0)
+RI: (list 0 0)
+RO: empty
+OO: (list 5)
+
+algorithm:
+  if alon is empty:
+    return empty
+  if first element is zero and remove-leading-zeros of rest is empty:
+    return empty
+  else:
+    cons the first of alon onto remove-leading-zeros of rest
+
+
+R(0) = a
+R(n) <= b + R(n-1) + R(n-1) = b + 2R(n-1)
+R(1)= b + 2a
+R(2) = b + 2(b + 2a) = 3b + 4a
+R(3) = b + 2(3b + 4a) = 7b + 8a

@@ -1,0 +1,70 @@
+Let A(n) be the largest number of elementary operations required to applying
+bignum+ to any two operands of exactly n digits each.
+
+For the base case, when both bignums are the empty list, n is equal to
+zero, and A(0) = a, where a is an integer greater than zero.
+
+For the other cases,
+The op-count for all work done except in recursive calls is less than or equal
+to b, an integer greater than zero. While the current analysis assumes the
+bignums have the same length, there is a case where bignum+ is applied to
+list of different lengths. Note that the first occurrence of bignum+ 
+within its definition always takes either "empty" or "(list 1)" as its first 
+argument, evaluating the first bignum+ will be limited in the amount of time it
+takes. This added amount of elementary operations is included in b.
+The argument size for the second occurrence of bignum+ (recursive calls) 
+is n-1 for both bignums.
+The total work done in the recursive call is A(n-1).
+Thus, A(n) <= b + A(n-1)
+
+The solution to the recurrence relation is A(n) <= bn + a, which is linear.
+
+--------------------------------------------------------------------------------
+
+Let P(n) be the largest number of elementary operations required to apply 
+digit*bignum to a single-digit-num and a bignum of length n.
+
+For the base case, when the bignum is the empty list, n is equal to zero, and
+P(0) = c, where c is an integer greater than zero.
+
+For the other case,
+The op-count for all work done except in recursive calls can be expressed by 
+A(n+1) + d, where d is an integer greater than zero. In the worst-case scenario,
+the expression (cons 0 (digit*bignum num (rest bignum))) will yield a bignum 
+with maximum length n+1, which is why A(n+1).
+The argument size in all recursive calls is n-1.
+Thus, the total work in all recursive calls is P(n-1).
+Thus, P(n) <= A(n+1) + d + P(n-1)
+
+In conclusion,
+P(n) = c, if n=0
+P(n) <= A(n+1) + d + P(n-1), if n is a natural number larger than 0
+
+--------------------------------------------------------------------------------
+
+Let M(n,k) be the largest number of elementary operations required to apply
+bignum* to two a bignum of length n and a bignum of length k.
+
+For the base cases,
+when both bignums are the empty list, n = k = 0, and M(0,0) = q, where q is 
+an integer greater than zero.
+when the first bignum is the empty list while the second bignum is not,
+n = 0 and k > 0, and M(0,k) = t, where t is an integer greater than zero.
+when the second bignum is the empty list while the first bignum is not,
+n > 0 and k = 0, and M(n,0) = s, where s is an integer greater than zero.
+
+For the other case, when neither bignums is the empty list, n > 0 and k > 0,
+The op-count for all work done except in recursive calls can be expressed by
+A(n+k) + P(k) + r, where r is an integer greater than zero. In the worst-case 
+scenario, the expression (cons 0 (bignum* (rest bignum1) bignum2)) will yield a 
+bignum with maximum length n+k, which is why A(n+k).
+The argument size in all recursive calls is n-1 and k.
+Thus, the total work in all recursive calls is M(n-1,k).
+Thus, M(n,k)<= A(n+k) + P(k) + r + M(n-1,k).
+
+In conclusion, 
+M (n,k) = q, if n=k=0
+M (n,k) = t, if n=0 and k>0
+M (n,k) = s, if n>0 and k=0
+M (n,k) <= A(n+k) + P(k) + r + M(n-1,k) otherwise.
+
